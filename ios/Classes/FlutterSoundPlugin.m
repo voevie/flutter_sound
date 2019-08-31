@@ -181,14 +181,14 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 
 - (void)startRecorder :(NSString*)path :(NSNumber*)numChannels :(NSNumber*)sampleRate :(NSNumber*)iosQuality :(NSNumber*)bitRate result: (FlutterResult)result {
   if ([path class] == [NSNull class]) {
-    audioFileURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingString:@"sound.m4a"]];
+    audioFileURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingString:@"sound.wav"]];
   } else {
     audioFileURL = [NSURL fileURLWithPath:path];
   }
 
   NSMutableDictionary *audioSettings = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                                  [NSNumber numberWithFloat:[sampleRate doubleValue]],AVSampleRateKey,
-                                 [NSNumber numberWithInt: kAudioFormatMPEG4AAC],AVFormatIDKey,
+                                 [NSNumber numberWithInt: kAudioFormatLinearPCM],AVFormatIDKey,
                                  [NSNumber numberWithInt: [numChannels intValue]],AVNumberOfChannelsKey,
                                  [NSNumber numberWithInt: [iosQuality intValue]],AVEncoderAudioQualityKey,nil];
     
@@ -246,7 +246,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 - (void)startPlayer:(NSString*)path result: (FlutterResult)result {
   bool isRemote = false;
   if ([path class] == [NSNull class]) {
-    audioFileURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingString:@"sound.m4a"]];
+    audioFileURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingString:@"sound.wav"]];
   } else {
     NSURL *remoteUrl = [NSURL URLWithString:path];
     if(remoteUrl && remoteUrl.scheme && remoteUrl.host){

@@ -2,6 +2,7 @@ package com.dooboolab.fluttersound;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioFormat;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Build;
@@ -23,6 +24,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
+import
 
 /** FlutterSoundPlugin */
 public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener, AudioInterface{ ;
@@ -46,6 +48,9 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
   final private Handler mainHandler = new Handler();
   final private Handler dbPeakLevelHandler = new Handler();
   private static MethodChannel channel;
+
+  private Runnable recorderTicker=null;
+  private AudioUtil audioUtil=null;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -143,61 +148,29 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
     if (path == null) {
       path = AudioModel.DEFAULT_FILE_LOCATION;
     }
-
-    if (this.model.getMediaRecorder() == null) {
-      this.model.setMediaRecorder(new MediaRecorder());
-      this.model.getMediaRecorder().setAudioSource(MediaRecorder.AudioSource.MIC);
-      this.model.getMediaRecorder().setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-      this.model.getMediaRecorder().setAudioEncoder(androidEncoder);
-      this.model.getMediaRecorder().setAudioChannels(numChannels);
-      this.model.getMediaRecorder().setAudioSamplingRate(sampleRate);
-
-      this.model.getMediaRecorder().setOutputFile(path);
-
-      // If bitrate is defined, the use it, otherwise use the OS default
-      if(bitRate != null){
-        this.model.getMediaRecorder().setAudioEncodingBitRate(bitRate);
-      }
-    }
+    audioUtil=AudioUtil.getInstance(path);
+    audioUtil.startRecord(MediaRecorder.AudioSource.MIC,sampleRate,numChannels, AudioFormat.ENCODING_PCM_16BIT);
 
     try {
-      this.model.getMediaRecorder().prepare();
-      this.model.getMediaRecorder().start();
-
       // Remove all pending runnables, this is just for safety (should never happen)
       recordHandler.removeCallbacksAndMessages(null);
       final long systemTime = SystemClock.elapsedRealtime();
-      this.model.setRecorderTicker(() -> {
 
-        long time = SystemClock.elapsedRealtime() - systemTime;
-//          Log.d(TAG, "elapsedTime: " + SystemClock.elapsedRealtime());
-//          Log.d(TAG, "time: " + time);
-
-//          DateFormat format = new SimpleDateFormat("mm:ss:SS", Locale.US);
-//          String displayTime = format.format(time);
-//          model.setRecordTime(time);
-        try {
-          JSONObject json = new JSONObject();
-          json.put("current_position", String.valueOf(time));
-          channel.invokeMethod("updateRecorderProgress", json.toString());
-          recordHandler.postDelayed(model.getRecorderTicker(), model.subsDurationMillis);
-        } catch (JSONException je) {
-          Log.d(TAG, "Json Exception: " + je.toString());
+      recorderTicker=new Runnable() {
+        @Override
+        public void run() {
+          long time = SystemClock.elapsedRealtime() - systemTime;
+          try {
+            JSONObject json = new JSONObject();
+            json.put("current_position", String.valueOf(time));
+            channel.invokeMethod("updateRecorderProgress", json.toString());
+            recordHandler.postDelayed(recorderTicker, model.subsDurationMillis);
+          } catch (JSONException je) {
+            Log.d(TAG, "Json Exception: " + je.toString());
+          }
         }
-      });
-      recordHandler.post(this.model.getRecorderTicker());
-
-      if(this.model.shouldProcessDbLevel) {
-        dbPeakLevelHandler.removeCallbacksAndMessages(null);
-        this.model.setDbLevelTicker(() -> {
-          //int ratio = model.getMediaRecorder().getMaxAmplitude() / micBase;
-          double dbLevel = 20 * Math.log10(model.getMediaRecorder().getMaxAmplitude() / model.micLevelBase);
-          double normalizedDbLevel = Math.min(Math.pow(10, dbLevel / 20.0) * 160.0, 160.0);
-          channel.invokeMethod("updateDbPeakProgress", normalizedDbLevel);
-          dbPeakLevelHandler.postDelayed(model.getDbLevelTicker(), (FlutterSoundPlugin.this.model.peakLevelUpdateMillis));
-        });
-        dbPeakLevelHandler.post(this.model.getDbLevelTicker());
-      }
+      };
+      recordHandler.post(recorderTicker);
 
 
       String finalPath = path;
@@ -218,15 +191,8 @@ public class FlutterSoundPlugin implements MethodCallHandler, PluginRegistry.Req
     recordHandler.removeCallbacksAndMessages(null);
     dbPeakLevelHandler.removeCallbacksAndMessages(null);
 
-    if (this.model.getMediaRecorder() == null) {
-      Log.d(TAG, "mediaRecorder is null");
-      result.error(ERR_RECORDER_IS_NULL, ERR_RECORDER_IS_NULL, ERR_RECORDER_IS_NULL);
-      return;
-    }
-    this.model.getMediaRecorder().stop();
-    this.model.getMediaRecorder().reset();
-    this.model.getMediaRecorder().release();
-    this.model.setMediaRecorder(null);
+    audioUtil.stopRecord();
+
     mainHandler.post(new Runnable(){
       @Override
       public void run() {
