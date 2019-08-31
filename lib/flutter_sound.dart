@@ -107,8 +107,8 @@ class FlutterSound {
 
   Future<String> startRecorder(String uri,
       {int sampleRate = 16000, int numChannels = 1, int bitRate,
-        AndroidEncoder androidEncoder = AndroidEncoder.AAC,
-        IosQuality iosQuality = IosQuality.LOW
+        AndroidEncoder androidEncoder = AndroidEncoder.HE_AAC,
+        IosQuality iosQuality = IosQuality.MEDIUM
       }) async {
     try {
       String result =
