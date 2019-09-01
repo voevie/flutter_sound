@@ -8,5 +8,4 @@ pubspec.lock
 build/
 
 .idea/
-flutter_sound.iml
-flutter_sound_android.iml
+packages
