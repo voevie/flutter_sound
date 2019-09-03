@@ -20,16 +20,16 @@ public class AudioUtil {
 
     private static AudioUtil mInstance;
     private AudioRecord recorder;
-//    //录音源
-//    private  int audioSource = MediaRecorder.AudioSource.MIC;
-//    //录音的采样频率
-//    private  int audioRate = 16000;
-//    //录音的声道，单声道
-//    private  int audioChannel = AudioFormat.CHANNEL_IN_MONO;
-//    //量化的深度
+    //录音源
+    private  int audioSource = MediaRecorder.AudioSource.MIC;
+    //录音的采样频率
+    private  int audioRate = 16000;
+    //录音的声道，单声道
+    private  int audioChannel = AudioFormat.CHANNEL_IN_MONO;
+    //量化的深度
     private  int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
     //缓存的大小
-    private static int bufferSize = AudioRecord.getMinBufferSize(audioRate, audioChannel, audioFormat);
+    private  int bufferSize = AudioRecord.getMinBufferSize(audioRate, audioChannel, audioFormat);
     //记录播放状态
     private boolean isRecording = false;
     //数字信号数组
@@ -55,7 +55,7 @@ public class AudioUtil {
         if (mInstance == null) {
             mInstance = new AudioUtil();
         }
-        createFile(savePath);//创建文件
+        mInstance.createFile(savePath);//创建文件
         return mInstance;
     }
 
@@ -69,10 +69,12 @@ public class AudioUtil {
     //开始录音
     public void startRecord(int audioSource,int  audioRate,int  audioChannel,int  audioFormat) {
         isRecording = true;
+        this.audioSource=audioSource;
+        this.audioRate=audioRate;
+        this.audioFormat=audioFormat;
         recorder = new AudioRecord(audioSource, audioRate, audioChannel, audioFormat, bufferSize);
         recorder.startRecording();
         recordData();
-
     }
 
     //停止录音
@@ -119,9 +121,9 @@ public class AudioUtil {
         FileOutputStream out = null;
         long totalAudioLen = 0;
         long totalDataLen = totalAudioLen + 36;
-        long longSampleRate = AudioUtil.audioRate;
+        long longSampleRate = this.audioRate;
         int channels = 1;
-        long byteRate = 16 * AudioUtil.audioRate * channels / 8;
+        long byteRate = 16 * this.audioRate * channels / 8;
         byte[] data = new byte[bufferSize];
         try {
             in = new FileInputStream(inFileName);
