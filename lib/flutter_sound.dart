@@ -151,7 +151,6 @@ class FlutterSound {
           await _channel.invokeMethod('startPlayer', <String, dynamic>{
         'path': uri,
       });
-      print('result: $result');
 
       _setPlayerCallback();
 
