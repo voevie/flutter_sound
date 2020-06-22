@@ -272,7 +272,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
             error: nil];
         // Able to play in background
         [[AVAudioSession sharedInstance] setActive: YES error: nil];
-        [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+        //[[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 
         [self->audioPlayer play];
         [self startTimer];
@@ -280,6 +280,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
         result(filePath);
     }];
 
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     [downloadTask resume];
   } else {
     // if (!audioPlayer) { // Fix sound distoring when playing recorded audio again.
