@@ -45,9 +45,24 @@ class FlutterSound {
         case "updateDbPeakProgress":
           _dbPeakController.add(call.arguments);
           break;
+        case "updateProgress":
+          Map<String, dynamic> result = jsonDecode(call.arguments);
+          _playerController.add(new PlayStatus.fromJSON(result));
+          break;
+        case "audioPlayerDidFinishPlaying":
+          Map<String, dynamic> result = jsonDecode(call.arguments);
+          PlayStatus status = new PlayStatus.fromJSON(result);
+          if (status.currentPosition != status.duration) {
+            status.currentPosition = status.duration;
+          }
+          _playerController.add(status);
+          this._isPlaying = false;
+          _removePlayerCallback();
+          break;
         default:
           throw new ArgumentError('Unknown method ${call.method} ');
       }
+      return ;
     });
   }
 
@@ -72,9 +87,14 @@ class FlutterSound {
           this._isPlaying = false;
           _removePlayerCallback();
           break;
+        case "updateRecorderProgress":
+          Map<String, dynamic> result = json.decode(call.arguments);
+          _recorderController.add(new RecordStatus.fromJSON(result));
+          break;
         default:
           throw new ArgumentError('Unknown method ${call.method}');
       }
+      return;
     });
   }
 
