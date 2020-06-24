@@ -5,7 +5,8 @@
   NSURL *audioFileURL;
   AVAudioRecorder *audioRecorder;
   AVAudioPlayer *audioPlayer;
-  NSTimer *timer;
+  NSTimer *playerTimer;
+  NSTimer *recorderTimer;
   NSTimer *dbPeakTimer;
 }
 double subscriptionDuration = 0.01;
@@ -27,13 +28,20 @@ FlutterMethodChannel* _channel;
   */
   [_channel invokeMethod:@"audioPlayerDidFinishPlaying" arguments:status];
 
-  [self stopTimer];
+  [self stopPlayerTimer];
 }
 
-- (void) stopTimer{
-    if (timer != nil) {
-        [timer invalidate];
-        timer = nil;
+- (void) stopPlayerTimer{
+    if (playerTimer != nil) {
+        [playerTimer invalidate];
+        playerTimer = nil;
+    }
+}
+
+-(void)stopRecorderTimer{
+    if(recorderTimer!=nil){
+        [recorderTimer invalidate];
+        recorderTimer=nil;
     }
 }
 
@@ -52,17 +60,15 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
   [_channel invokeMethod:@"updateRecorderProgress" arguments:status];
 }
 
-- (void)updateProgress:(NSTimer*) timer
+- (void)updatePlayerProgress:(NSTimer*) timer
 {
   NSNumber *duration = [NSNumber numberWithDouble:audioPlayer.duration * 1000];
   NSNumber *currentTime = [NSNumber numberWithDouble:audioPlayer.currentTime * 1000];
 
   if ([duration intValue] == 0 && timer != nil) {
-    [self stopTimer];
+    [self stopPlayerTimer];
     return;
   }
-
-
   NSString* status = [NSString stringWithFormat:@"{\"duration\": \"%@\", \"current_position\": \"%@\"}", [duration stringValue], [currentTime stringValue]];
   /*
   NSDictionary *status = @{
@@ -83,7 +89,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 - (void)startRecorderTimer
 {
   dispatch_async(dispatch_get_main_queue(), ^{
-      self->timer = [NSTimer scheduledTimerWithTimeInterval: subscriptionDuration
+      self->recorderTimer = [NSTimer scheduledTimerWithTimeInterval: subscriptionDuration
                                            target:self
                                            selector:@selector(updateRecorderProgress:)
                                            userInfo:nil
@@ -91,12 +97,12 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
   });
 }
 
-- (void)startTimer
+- (void)startPlayerTimer
 {
   dispatch_async(dispatch_get_main_queue(), ^{
-      self->timer = [NSTimer scheduledTimerWithTimeInterval:subscriptionDuration
+      self->playerTimer = [NSTimer scheduledTimerWithTimeInterval:subscriptionDuration
                                            target:self
-                                           selector:@selector(updateProgress:)
+                                           selector:@selector(updatePlayerProgress:)
                                            userInfo:nil
                                            repeats:YES];
   });
@@ -234,7 +240,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
   // Stop Db Timer
   [dbPeakTimer invalidate];
   dbPeakTimer = nil;
-  [self stopTimer];
+  [self stopRecorderTimer];
     
   AVAudioSession *audioSession = [AVAudioSession sharedInstance];
   [audioSession setActive:NO error:nil];
@@ -275,7 +281,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
         //[[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 
         [self->audioPlayer play];
-        [self startTimer];
+        [self startPlayerTimer];
         NSString *filePath = self->audioFileURL.absoluteString;
         result(filePath);
     }];
@@ -294,7 +300,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
         error: nil];
 
     [audioPlayer play];
-    [self startTimer];
+    [self startPlayerTimer];
 
     NSString *filePath = audioFileURL.absoluteString;
     result(filePath);
@@ -303,9 +309,9 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 
 - (void)stopPlayer:(FlutterResult)result {
   if (audioPlayer) {
-    if (timer != nil) {
-        [timer invalidate];
-        timer = nil;
+    if (playerTimer != nil) {
+        [playerTimer invalidate];
+        playerTimer = nil;
     }
     [audioPlayer stop];
     audioPlayer = nil;
@@ -321,9 +327,9 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 - (void)pausePlayer:(FlutterResult)result {
   if (audioPlayer && [audioPlayer isPlaying]) {
     [audioPlayer pause];
-    if (timer != nil) {
-        [timer invalidate];
-        timer = nil;
+    if (playerTimer != nil) {
+        [playerTimer invalidate];
+        playerTimer = nil;
     }
     result(@"pause play");
   } else {
@@ -355,7 +361,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
     setCategory: AVAudioSessionCategoryPlayback
     error: nil];
   [audioPlayer play];
-  [self startTimer];
+  [self startPlayerTimer];
   NSString *filePath = audioFileURL.absoluteString;
   result(filePath);
 }
@@ -363,7 +369,7 @@ NSString* status = [NSString stringWithFormat:@"{\"current_position\": \"%@\"}",
 - (void)seekToPlayer:(nonnull NSNumber*) time result: (FlutterResult)result {
   if (audioPlayer) {
       audioPlayer.currentTime = [time doubleValue] / 1000;
-      [self updateProgress:nil];
+      [self updatePlayerProgress:nil];
       result([time stringValue]);
   } else {
     result([FlutterError

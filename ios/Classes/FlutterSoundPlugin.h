@@ -4,6 +4,8 @@
 @interface FlutterSoundPlugin : NSObject<FlutterPlugin, AVAudioPlayerDelegate>
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player
         successfully:(BOOL)flag;
-- (void)updateProgress:(NSTimer*) timer;
-- (void)startTimer;
+- (void)updatePlayerProgress:(NSTimer*) timer;
+- (void)updateRecorderProgress:(NSTimer*) timer;
+- (void)startPlayerTimer;
+- (void)startRecorderTimer;
 @end
